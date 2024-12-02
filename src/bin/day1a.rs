@@ -8,11 +8,14 @@ use defmt::*;
 use embassy_executor::Spawner;
 use heapless::Vec;
 use {defmt_rtt as _, panic_probe as _};
+use advent_of_code_2024::util::count_lines;
+
 
 const INPUT_CONTENT: &str = include_str!("../../data/day1/input.txt");
+const INPUT_NUM_LINES: usize = count_lines(INPUT_CONTENT);
 
 type Id = u32;
-type IdList = Vec<Id, 1000>;
+type IdList = Vec<Id, INPUT_NUM_LINES>;
 
 fn parse_lists(context: &str) -> (IdList, IdList) {
     let mut list_a = IdList::new();
