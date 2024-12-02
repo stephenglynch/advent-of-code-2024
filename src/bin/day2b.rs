@@ -27,13 +27,7 @@ fn parse(text: &str) -> AllReports {
 }
 
 fn calculate_answer(all_reports: AllReports) -> u16 {
-    all_reports.into_iter().enumerate().fold(0, |acc, (i, r)| {
-        let safe = check_safety(r);
-        if !safe {
-            info!("line = {}", i + 1);
-        }
-        acc + safe as u16
-    })
+    all_reports.into_iter().enumerate().fold(0, |acc, (_, r)| acc + check_safety(r) as u16)
 }
 
 fn check_safety(mut report: Report) -> bool {
