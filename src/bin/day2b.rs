@@ -6,6 +6,7 @@ use embassy_rp;
 
 use defmt::*;
 use embassy_executor::Spawner;
+use embassy_time::Instant;
 use heapless::Vec;
 use {defmt_rtt as _, panic_probe as _};
 use advent_of_code_2024::util::count_lines;
@@ -69,7 +70,9 @@ fn check_safety_increasing(report: &Report) -> bool {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    let start = Instant::now();
     let all_reports = parse(INPUT_CONTENT);
     let answer = calculate_answer(all_reports);
-    info!("answer = {}", answer);
+    let duration = Instant::now() - start;
+    info!("answer = {} (took {} us)", answer, duration.as_micros());
 }
