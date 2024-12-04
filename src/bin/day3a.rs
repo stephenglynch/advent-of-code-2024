@@ -13,10 +13,7 @@ use heapless::Vec;
 use {defmt_rtt as _, panic_probe as _};
 
 use nom::{
-    bytes::complete::{is_a, tag },
-    error::{Error, ErrorKind},
-    multi::fold_many0,
-    Err, IResult};
+    bytes::complete::{is_a, tag, take_until }, character::complete::anychar, combinator::{iterator, opt}, error::{Error, ErrorKind}, multi::{fold_many0, many0_count}, sequence::tuple, Err, IResult};
 
 const INPUT_CONTENT: &str = include_str!("../../data/day3/input.txt");
 const PAIRS_VEC_LEN: usize = 1000;
@@ -39,16 +36,21 @@ fn parse_mult(input: &[u8]) -> IResult<&[u8], MultPair> {
 }
 
 fn search_until_mult(mut input: &[u8]) -> IResult<&[u8], MultPair> {
-    loop {
-        match parse_mult(input) {
-            Ok((i, pair)) => return Ok((i, pair)),
-            Err(_) => ()
-        }
-        input = match &input.get(1..) {
-            Some(i) => i,
-            None => return Err(Err::Error(Error::new(input, ErrorKind::Fail)))
-        };
-    }
+    iterator(
+        alt(
+            parse_mult,
+            take(1)
+        )
+    // loop {
+    //     match parse_mult(input) {
+    //         Ok((i, pair)) => return Ok((i, pair)),
+    //         Err(_) => ()
+    //     }
+    //     input = match &input.get(1..) {
+    //         Some(i) => i,
+    //         None => return Err(Err::Error(Error::new(input, ErrorKind::Fail)))
+    //     };
+    // }
 }
 
 fn parse_all(input: &[u8]) -> IResult<&[u8], MultPairVec> {
