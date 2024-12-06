@@ -24,3 +24,22 @@ pub const fn count_lines(text: &str) -> usize {
 
     count
 }
+
+pub const fn count_line_len(text: &str) -> usize {
+    let len = text.len();
+    if len == 0 {
+        return 0;
+    }
+
+    let bytes: &[u8] = text.as_bytes();
+    let mut count = 1;
+    while count < len {
+        let b = bytes[count];
+        if b == b'\n' {
+            break;
+        }
+        count += 1;
+    }
+
+    count
+}
