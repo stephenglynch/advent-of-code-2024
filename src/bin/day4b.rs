@@ -17,7 +17,6 @@ const INPUT_LINE_LEN: usize = count_line_len(INPUT_CONTENT);
 const GRID_SIZE: usize = INPUT_NUM_LINES * INPUT_LINE_LEN;
 
 type Grid = Vec<char, GRID_SIZE>;
-type Quad = [char; 4];
 
 fn parse_grid(text: &str) -> Grid {
     let mut grid = Grid::new();
@@ -28,38 +27,41 @@ fn parse_grid(text: &str) -> Grid {
 }
 
 fn grid_get(grid: &Grid, x: usize, y: usize) -> Option<char> {
-    if x >= INPUT_LINE_LEN || y >= INPUT_NUM_LINES {
+    if y >= INPUT_LINE_LEN || x >= INPUT_NUM_LINES {
         None
     } else {
-        grid.get(y * INPUT_LINE_LEN + x).copied()
+        grid.get(x * INPUT_LINE_LEN + y).copied()
     }
 }
 
-fn grid_get_4(grid: &Grid, x_start: usize, y_start: usize, dir_x: i8, dir_y: i8) -> Option<Quad> {
-    let mut quad: Quad = ['.'; 4];
-    for i in 0..4 {
-        let x =  x_start + (i * dir_x) as usize;
-        let y = y_start + (i * dir_y) as usize;
-        match grid_get(grid, x, y) {
-            Some(c) => quad[i as usize] = c,
-            None => return None
-        };
+fn check_xmass(grid: &Grid, x_start: usize, y_start: usize) -> bool {
+    // Check all possible arrangements
+    let xmass = [
+        [(0, 0, 'M'), (0, 2, 'M'), (1, 1, 'A'), (2, 0, 'S'), (2, 2, 'S')],
+        [(0, 0, 'S'), (0, 2, 'S'), (1, 1, 'A'), (2, 0, 'M'), (2, 2, 'M')],
+        [(0, 0, 'M'), (0, 2, 'S'), (1, 1, 'A'), (2, 0, 'M'), (2, 2, 'S')],
+        [(0, 0, 'S'), (0, 2, 'M'), (1, 1, 'A'), (2, 0, 'S'), (2, 2, 'M')],
+    ];
+
+    for xmas in xmass {
+        if xmas.into_iter().fold(true, |acc, (x, y, c_xmas)| {
+            acc && match grid_get(grid, x_start + x, y_start + y) {
+                Some(c) => c == c_xmas,
+                None => false
+            }
+        }) {
+            return true
+        }
     }
-    Some(quad)
+    false
 }
+
 
 fn grid_find_xmas(grid: &Grid) -> u32 {
-    let xmas: [char; 4] = ['X', 'M', 'A', 'S'];
-    let directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, -1), (-1, 1)];
     let mut total = 0;
-    for x in 0..INPUT_LINE_LEN {
-        for y in 0..INPUT_NUM_LINES {
-            for (dir_x, dir_y) in directions {
-                    match grid_get_4(grid, x, y, dir_x, dir_y) {
-                        Some(quad) => if quad == xmas {total += 1},
-                        None => continue
-                    }
-            }
+    for x in 0..(INPUT_LINE_LEN - 2) {
+        for y in 0..(INPUT_NUM_LINES - 2) {
+            total += check_xmass(grid, x, y) as u32;
         }
     }
     total
@@ -71,5 +73,5 @@ async fn main(_spawner: Spawner) {
     let grid = parse_grid(INPUT_CONTENT);
     let answer = grid_find_xmas(&grid);
     let duration = Instant::now() - start;
-    info!("answer = {} (took {} us)", answer, duration.as_micros());
+    info!("answer = {} (took {} ms)", answer, duration.as_millis());
 }
