@@ -8,18 +8,18 @@ use embassy_rp;
 
 use defmt::info;
 use embassy_executor::Spawner;
-use heapless::Vec;
+use embassy_time::Instant;
 
 use {defmt_rtt as _, panic_probe as _};
 
-use nom::{
-    bytes::complete::{is_a, tag, take_until }, character::complete::anychar, combinator::{iterator, opt}, error::{Error, ErrorKind}, multi::{fold_many0, many0_count}, sequence::tuple, Err, IResult};
+use nom::branch::alt;
+use nom::bytes::complete::{is_a, tag, take};
+use nom::combinator::{iterator, map, value};
+use nom::IResult;
 
 const INPUT_CONTENT: &str = include_str!("../../data/day3/input.txt");
-const PAIRS_VEC_LEN: usize = 1000;
 
 type MultPair = (u32, u32);
-type MultPairVec = Vec<MultPair, PAIRS_VEC_LEN>;
 
 fn parse_number(input: &[u8]) -> IResult<&[u8], u32> {
     let (input, s) = is_a("0123456789".as_bytes())(input)?;
@@ -35,41 +35,20 @@ fn parse_mult(input: &[u8]) -> IResult<&[u8], MultPair> {
     Ok((input, (a, b)))
 }
 
-fn search_until_mult(mut input: &[u8]) -> IResult<&[u8], MultPair> {
-    iterator(
-        alt(
-            parse_mult,
-            take(1)
-        )
-    // loop {
-    //     match parse_mult(input) {
-    //         Ok((i, pair)) => return Ok((i, pair)),
-    //         Err(_) => ()
-    //     }
-    //     input = match &input.get(1..) {
-    //         Some(i) => i,
-    //         None => return Err(Err::Error(Error::new(input, ErrorKind::Fail)))
-    //     };
-    // }
+fn calculate_answer(input: &[u8]) -> u32 {
+    iterator(input, alt((
+        map(parse_mult, |x| Some(x)),
+        value(None, take(1usize))
+    )))
+        .filter(|x| x.is_some())
+        .map(|x| x.unwrap())
+        .fold(0, |acc, (a, b)| acc + a * b)
 }
-
-fn parse_all(input: &[u8]) -> IResult<&[u8], MultPairVec> {
-    let (input, x) = fold_many0(
-        search_until_mult,
-        MultPairVec::new,
-        |mut acc, item| {
-            let _ = acc.push(item);
-            acc
-        }
-    )(input)?;
-    Ok((input, x))
-}
-
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
-    let (_, mults) = parse_all(INPUT_CONTENT.as_bytes()).unwrap();
-    info!("mults.len = {}", mults.len());
-    let answer = mults.into_iter().fold(0, |acc, (a, b)| acc + a * b);
-    info!("answer = {}", answer);
+    let start = Instant::now();
+    let answer = calculate_answer(INPUT_CONTENT.as_bytes());
+    let duration = Instant::now() - start;
+    info!("answer = {} (took {} ms)", answer, duration.as_millis());
 }
