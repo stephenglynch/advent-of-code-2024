@@ -22,12 +22,13 @@ const INPUT_CONTENT: &str = include_str!("../../data/day5/input.txt");
 
 // Determined by inspecting input.txt
 const RULES_MAX_LEN: usize = 1200;
+const RULES_LUT_LEN: usize = RULES_MAX_LEN.next_power_of_two();
 const UPDATES_LIST_MAX_LEN: usize = 200;
 const UPDATE_MAX_LEN: usize = 23;
-const MAX_PAGES: usize = 50;
 
 type Rule = (u8, u8);
 type RulesList = Vec<Rule, RULES_MAX_LEN>;
+type RulesLut = FnvIndexSet<Rule, RULES_LUT_LEN>;
 type Update = Vec<u8, UPDATE_MAX_LEN>;
 type UpdatesList = Vec<Update, UPDATES_LIST_MAX_LEN>;
 
@@ -66,57 +67,45 @@ fn parse_all_updates(input: &str) -> IResult<&str, UpdatesList> {
     Ok((input, updates_list))
 }
 
-fn unique_pages(rules: &RulesList) -> Vec<u8, MAX_PAGES> {
-    let mut pages = FnvIndexSet::<_, 64>::new();
-    for (left, right) in rules.iter().copied() {
-        let _ = pages.insert(left);
-        let _ = pages.insert(right);
-    }
-    pages.into_iter().copied().collect()
-}
-
 fn middle_page(update: &Update) -> u8 {
     update[update.len() / 2]
 }
 
+fn create_rule_lut(rules: &RulesList) -> RulesLut {
+    let mut lut = RulesLut::new();
+    for &pair in rules {
+        let _ = lut.insert(pair);
+    }
+    lut
+}
+
+fn check_rule(rules: &RulesLut, a: u8, b: u8) -> Ordering {
+    if rules.contains(&(a, b)) {
+        Ordering::Less
+    } else {
+        Ordering::Greater
+    }
+}
+
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
+    let start = Instant::now();
     let (_, (rules, updates)) = parse(INPUT_CONTENT).unwrap();
-    let mut pages = unique_pages(&rules);
-    info!("rules.len = {} updates.len = {}", rules.len(), updates.len());
-
-    // Sort pages by the ordering rules
-    pages.sort_unstable_by(|a, b| {
-        if rules.iter().find(|e| **e == (*a, *b)).is_some() {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }
-    });
-
-    info!("pages = {=[?]} ({} items)", pages, pages.len());
-
-    // let indexed_pages: Vec<_, MAX_PAGES> = pages.into_iter().enumerate().collect();
+    let rule_lut = create_rule_lut(&rules);
 
     let mut answer = 0;
-    let mut update_num = 0;
     for update in updates {
-        // info!("update = {=[?]}", update);
         let mut sorted_update = update.clone();
-        sorted_update.sort_unstable_by_key(|&x| {
-            let (i, _) = pages.iter().enumerate().find(|&(_, &y)| y == x).unwrap();
-            i
+        sorted_update.sort_unstable_by(|&a, &b| {
+            check_rule(&rule_lut, a, b)
         });
 
         if sorted_update == update {
             let middle = middle_page(&update) as u32;
             answer += middle;
-            // info!("update {} {=[?]} middle page {}", update_num, update, middle);
-        } else {
-            error!("update{} = {=[?]} sorted = {=[?]}", update_num, update, sorted_update);
         }
-        update_num += 1;
     }
 
-    info!("answer = {}", answer);
+    let duration = Instant::now() - start;
+    info!("answer = {} (took {} us)", answer, duration.as_micros());
 }
