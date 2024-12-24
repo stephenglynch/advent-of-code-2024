@@ -1,0 +1,9 @@
+[package]
+name = "advent-of-code-2024"
+version = "0.1.0"
+authors = ["Stephen Lynch <stepheng.lynch@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+heapless = "0.8"
+defmt = "0.3"
