@@ -3,7 +3,9 @@ name = "advent-of-code-2024-lib"
 version = "0.1.0"
 authors = ["Stephen Lynch <stepheng.lynch@gmail.com>"]
 edition = "2021"
+resolver = "2"
 
 [dependencies]
 heapless = "0.8"
 defmt = "0.3"
+nom = { version = "7.1.3", default-features = false }
