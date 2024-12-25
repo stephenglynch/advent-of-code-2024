@@ -45,28 +45,6 @@ fn parse_equation(input: &str) -> IResult<&str, Equation> {
     Ok((input, (result, operands)))
 }
 
-// fn evaluate_equation(eq: Equation, ops: Operators) -> bool {
-//     let (expected, operands) = eq;
-//     let mut i = 0;
-//     let result = operands.into_iter().reduce(|acc, x| {
-//         let val = match ops[i] {
-//             Op::Add => acc + x,
-//             Op::Mult => acc * x,
-//         };
-//         i += 1;
-//         val
-//     }).unwrap();
-
-//     expected == result
-// }
-
-fn cycle_op(op: Op) -> (Op, bool) {
-    match op {
-        Op::Add => (Op::Mult, false),
-        Op::Mult => (Op::Add, true)
-    }
-}
-
 fn evaluate_op(op: Op, a: u64, b: u64) -> u64 {
     match op {
         Op::Add => a + b,
