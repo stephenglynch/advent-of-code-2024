@@ -1,6 +1,6 @@
 use heapless::Vec;
 use nom::bytes::complete::tag;
-use nom::character::complete::{u32, newline};
+use nom::character::complete::{u64, newline};
 use nom::sequence::terminated;
 use nom::combinator::iterator;
 use nom::IResult;
@@ -18,8 +18,8 @@ enum Op {
     Mult
 }
 
-type Operands = Vec<u32, OPERANDS_MAX_LEN>;
-type Equation = (u32, Operands);
+type Operands = Vec<u64, OPERANDS_MAX_LEN>;
+type Equation = (u64, Operands);
 type EquationList = Vec<Equation, EQUATIONS_LIST_MAX_LEN>;
 type Operators = Vec<Op, OPERATORS_MAX_LEN>;
 
@@ -31,16 +31,16 @@ fn parse(input: &str) -> IResult<&str, EquationList> {
 }
 
 fn parse_operands(input: &str) -> IResult<&str, Operands> {
-    let mut it = iterator(input, terminated(u32, tag(" ")));
+    let mut it = iterator(input, terminated(u64, tag(" ")));
     let mut operands: Operands = it.collect();
     let (input, _) = it.finish()?;
-    let (input, last) = u32(input)?;
+    let (input, last) = u64(input)?;
     let _ = operands.push(last);
     Ok((input, operands))
 }
 
 fn parse_equation(input: &str) -> IResult<&str, Equation> {
-    let (input, result) = terminated(u32, tag(": "))(input)?;
+    let (input, result) = terminated(u64, tag(": "))(input)?;
     let (input, operands) = parse_operands(input)?;
     Ok((input, (result, operands)))
 }
@@ -67,20 +67,65 @@ fn cycle_op(op: Op) -> (Op, bool) {
     }
 }
 
-fn evaluate_op(op: Op, a: u32, b: u32) -> u32 {
+fn evaluate_op(op: Op, a: u64, b: u64) -> u64 {
     match op {
         Op::Add => a + b,
         Op::Mult => a * b
     }
 }
 
-fn check_equation(eq: Equation) -> Option<u32> {
+struct OpsPermutations {
+    current: Option<Operators>,
+    state: Operators,
+}
+
+impl OpsPermutations {
+    fn new(length: usize) -> Self {
+        let mut current = Vec::new();
+        let _ = current.resize(length, Op::Add);
+        OpsPermutations {
+            state: current.clone(),
+            current: Some(current)
+        }
+    }
+}
+
+impl Iterator for OpsPermutations{
+    type Item = Operators;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut bump_next = true;
+        let next = self.current.clone();
+        for op in self.state.iter_mut() {
+            if bump_next {
+                *op = match *op {
+                    Op::Add => {
+                        bump_next = false;
+                        Op::Mult
+                    }
+                    Op::Mult => {
+                        bump_next = true;
+                        Op::Add
+                    }
+                };
+            } else {
+                break;
+            }
+        }
+        if !bump_next {
+            self.current = Some(self.state.clone());
+        } else {
+            self.current = None;
+        }
+        next
+    }
+}
+
+fn check_equation(eq: Equation) -> Option<u64> {
     let (expected, operands) = eq;
-    let num_operators = operands.len() - 1;
-    let mut operators: Operators = Vec::new();
-    let mut carry = false;
-    let _ = operators.resize(num_operators, Op::Add);
-    for _ in 0..2_u32.pow(num_operators as u32) {
+    let iter = OpsPermutations::new(operands.len() - 1);
+
+    for operators in iter {
         // Compute current permutation
         let mut i = 0;
         let result  = operands.iter().copied().reduce(|acc, x| {
@@ -93,22 +138,12 @@ fn check_equation(eq: Equation) -> Option<u32> {
         if result == expected {
             return Some(result);
         }
-
-        // Cycle to next permutation
-        (operators[0], carry) = cycle_op(operators[0]);
-        for op in operators.iter_mut() {
-            if carry {
-                (*op, carry) = cycle_op(*op);
-            } else {
-                break;
-            }
-        }
     }
 
     None
 }
 
-pub fn answer() -> u32 {
+pub fn answer() -> u64 {
     let (_, equations) = parse(INPUT_CONTENT).unwrap();
     let mut answer = 0;
     for eq in equations {
@@ -117,4 +152,36 @@ pub fn answer() -> u32 {
         }
     }
     return answer;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const INPUT_CONTENT: &str = include_str!("../data/day7/input.txt");
+
+    #[test]
+    fn test_iter() {
+        let iter = OpsPermutations::new(4);
+        for ops in iter {
+            println!("{:?}", ops);
+        }
+    }
+
+    #[test]
+    fn test_answer() {
+        let (_, equations) = parse(INPUT_CONTENT).unwrap();
+        let mut answer = 0;
+        for eq in equations {
+            if let Some(val) = check_equation(eq) {
+                answer += val;
+            }
+        }
+        println!("answer = {}", answer);
+    }
+
+    #[test]
+    fn test_example_answer() {
+        assert_eq!(answer(), 3749);
+    }
 }
