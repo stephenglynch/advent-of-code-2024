@@ -22,5 +22,7 @@ async fn main(_spawner: Spawner) {
     info!("day 4b answer = {}", day4b::answer());
     info!("day 5a answer = {}", day5a::answer());
     info!("day 5b answer = {}", day5b::answer());
+    info!("day 6a answer = {}", day6a::answer());
     info!("day 7a answer = {}", day7a::answer());
+    info!("day 7b answer = {}", day7b::answer());
 }

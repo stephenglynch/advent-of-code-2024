@@ -151,7 +151,6 @@ pub fn answer() -> u64 {
 mod tests {
     use super::*;
 
-    const EXAMPLE_CONTENT: &str = include_str!("../data/day7/example.txt");
     const INPUT_CONTENT: &str = include_str!("../data/day7/input.txt");
 
     #[test]
